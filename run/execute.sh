@@ -5,10 +5,10 @@ set -o pipefail
 
 #shellcheck disable=SC2154
 if [[ "$DRV_IMPORT_FROM_DISCOVERY" == "false" ]]; then
-   unzstd < "$EVALSTORE_IMPORT/$(basename "$actionDrv").zst" | nix-store --import &>/dev/null
+   unzstd < "$EVALSTORE_IMPORT/$(basename "$actionDrv").zst" | nix-store --import
 else
    ssh discovery -- "nix-store --query --requisites $actionDrv | nix-store --stdin --export | zstd" \
-   | unzstd | nix-store --import &>/dev/null
+   | unzstd | nix-store --import
 fi
 
 #shellcheck disable=SC2154
@@ -33,7 +33,6 @@ fi
 #   works around https://discourse.nixos.org/t/nix-with-faketty/31042
 start=$(date +%s)
 faketty nix build "${build_args[@]}" "$actionDrv^out" \
-  1> /dev/null \
   2> >(sed --unbuffered $'
     s/\r\033\[0m\033\[K//g
 
@@ -64,7 +63,7 @@ if [[ "$action" != "build" ]]; then
     echo "::group::🐟 fetch $action closure (from $REMOTE_STORE)"
     {
       start=$(date +%s)
-      nix copy --from "$REMOTE_STORE" "$out" 1> /dev/null 2> >(sed --unbuffered "
+      nix copy --from "$REMOTE_STORE" "$out" 2> >(sed --unbuffered "
   
         # delete some lines that dont make sense
         /^$/d
