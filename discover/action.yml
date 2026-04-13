@@ -36,7 +36,7 @@ runs:
     - name: Discover
       id: eval
       env:
-        EVALSTORE_EXPORT: ${{ runner.temp }}/eval-store
+        EVALSTORE_EXPORT: ${{ github.workspace }}/eval-store
         OWNER_AND_REPO: ${{ github.repository }}
         SHA: ${{ github.sha }}
         SKIP_DRV_EXPORT: ${{ inputs.ffBuildInstructions }}
@@ -47,5 +47,5 @@ runs:
       id: cache
       if: inputs.ffBuildInstructions == 'false'
       with:
-        path: ${{ runner.temp }}/eval-store
+        path: eval-store
         key: drv-pack-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
