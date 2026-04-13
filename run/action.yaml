@@ -56,7 +56,7 @@ runs:
       id: cache
       if: inputs.ffBuildInstructions == 'false'
       with:
-        path: ${{ runner.temp }}/eval-store
+        path: eval-store
         key: drv-pack-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
         fail-on-cache-miss: true
 
@@ -71,7 +71,7 @@ runs:
       run: ${{ github.action_path }}/execute.sh
       shell: bash
       env:
-        EVALSTORE_IMPORT: ${{ runner.temp }}/eval-store
+        EVALSTORE_IMPORT: ${{ github.workspace }}/eval-store
         DRV_IMPORT_FROM_DISCOVERY: ${{ inputs.ffBuildInstructions }}
         REMOTE_STORE: ${{ inputs.remoteStore }}
 
