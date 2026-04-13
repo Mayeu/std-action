@@ -24,7 +24,7 @@ detect CI targets that need re-doing; implemented on top of familiar GH Actions.
 
 ## Usage
 
-**Minimumn nix version `v2.16.1`**
+**Minimum nix version `v2.16.1`**
 
 Tip! Since GitHub CI doesn't support `yaml` anchors, explode your file with:
 
@@ -86,14 +86,14 @@ jobs:
           generate_summary_for: job
       # significantly speeds up things in small projects
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - uses: divnix/std-action/discover@main
+      - uses: Mayeu/std-action/discover@main
         id: discovery
 
   build: &job
     needs: discover
     name: ${{ matrix.target.jobName }}
     runs-on: ubuntu-latest
-    if: fromJSON(needs.discover.outputs.hits).packages.build != '{}'
+    if: contains(fromJSON(needs.discover.outputs.hits), 'packages')
     strategy:
       matrix:
         target: ${{ fromJSON(needs.discover.outputs.hits).packages.build }}
@@ -106,12 +106,12 @@ jobs:
           nixbuild_ssh_key: ${{ secrets.SSH_PRIVATE_KEY }}
           generate_summary_for: job
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - uses: divnix/std-action/run@main
+      - uses: Mayeu/std-action/run@main
 
   images:
     <<: *job
     needs: [discover, build]
-    if: fromJSON(needs.discover.outputs.hits).oci-images.publish != '{}'
+    if: contains(fromJSON(needs.discover.outputs.hits), 'oci-images')
     strategy:
       matrix:
         target: ${{ fromJSON(needs.discover.outputs.hits).oci-images.publish }}
@@ -122,7 +122,7 @@ jobs:
     environment:
       name: development
       url: https://my.dev.example.com
-    if: fromJSON(needs.discover.outputs.hits).deployments.apply != '{}'
+    if: contains(fromJSON(needs.discover.outputs.hits), 'deployments')
     strategy:
       matrix:
         target: ${{ fromJSON(needs.discover.outputs.hits).deployments.apply }}
@@ -193,7 +193,7 @@ jobs:
     runs-on: [self-hosted, discovery]
     steps:
       - name: Standard Discovery
-        uses: divnix/std-action/discover@main
+        uses: Mayeu/std-action/discover@main
         id: discovery
         # avoids transporting derivations via GH Cache
         with: { ffBuildInstructions: true }
@@ -204,17 +204,17 @@ jobs:
       fail-fast: false
       matrix:
         target: ${{ fromJSON(needs.discover.outputs.hits).oci-images.publish }}
-    if: fromJSON(needs.discover.outputs.hits).oci-images.publish != '{}'
+    if: contains(fromJSON(needs.discover.outputs.hits), 'oci-images')
     name: ${{ matrix.target.jobName }}
     runs-on: ubuntu-latest
     steps:
       # sets up ssh credentials for `ssh discovery ...`
-      - uses: divnix/std-action/setup-discovery-ssh@main
+      - uses: Mayeu/std-action/setup-discovery-ssh@main
         with:
           ssh_key: ${{ secrets.SSH_PRIVATE_KEY_CI }}
           user_name: ${{ env.DISCOVERY_USER_NAME }}
           ssh_known_hosts_entry: ${{ env.DISCOVERY_KNOWN_HOSTS_ENTRY }}
-      - uses: divnix/std-action/run@main
+      - uses: Mayeu/std-action/run@main
         # avoids retreiving derivations via GH Cache and uses `ssh discovery ...` instead
         with: { ffBuildInstructions: true }
 
@@ -223,7 +223,7 @@ jobs:
     strategy:
       matrix:
         target: ${{ fromJSON(needs.discover.outputs.hits).envs.build }}
-    if: fromJSON(needs.discover.outputs.hits).envs.build != '{}'
+    if: contains(fromJSON(needs.discover.outputs.hits), 'envs')
 ```
 
 </details>
