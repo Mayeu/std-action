@@ -93,7 +93,7 @@ jobs:
     needs: discover
     name: ${{ matrix.target.jobName }}
     runs-on: ubuntu-latest
-    if: contains(fromJSON(needs.discover.outputs.hits), 'packages')
+    if: contains(needs.discover.outputs.hits, '"packages"')
     strategy:
       matrix:
         target: ${{ fromJSON(needs.discover.outputs.hits).packages.build }}
@@ -111,7 +111,7 @@ jobs:
   images:
     <<: *job
     needs: [discover, build]
-    if: contains(fromJSON(needs.discover.outputs.hits), 'oci-images')
+    if: contains(needs.discover.outputs.hits, '"oci-images"')
     strategy:
       matrix:
         target: ${{ fromJSON(needs.discover.outputs.hits).oci-images.publish }}
@@ -122,7 +122,7 @@ jobs:
     environment:
       name: development
       url: https://my.dev.example.com
-    if: contains(fromJSON(needs.discover.outputs.hits), 'deployments')
+    if: contains(needs.discover.outputs.hits, '"deployments"')
     strategy:
       matrix:
         target: ${{ fromJSON(needs.discover.outputs.hits).deployments.apply }}
@@ -204,7 +204,7 @@ jobs:
       fail-fast: false
       matrix:
         target: ${{ fromJSON(needs.discover.outputs.hits).oci-images.publish }}
-    if: contains(fromJSON(needs.discover.outputs.hits), 'oci-images')
+    if: contains(needs.discover.outputs.hits, '"oci-images"')
     name: ${{ matrix.target.jobName }}
     runs-on: ubuntu-latest
     steps:
@@ -223,7 +223,7 @@ jobs:
     strategy:
       matrix:
         target: ${{ fromJSON(needs.discover.outputs.hits).envs.build }}
-    if: contains(fromJSON(needs.discover.outputs.hits), 'envs')
+    if: contains(needs.discover.outputs.hits, '"envs"')
 ```
 
 </details>
