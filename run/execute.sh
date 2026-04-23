@@ -57,7 +57,13 @@ shopt -s lastpipe
 #shellcheck disable=SC2154
 if [[ "$action" != "build" ]]; then
 
-  out="$(nix derivation show "$actionDrv^out" | jq -r '.[].outputs.out.path')"
+  # nix >= 2.34 wraps output in {"derivations": ..., "version": N}
+  # and returns short hashes in .outputs.out.path (no /nix/store/ prefix);
+  # older versions use a flat {"/nix/store/...": ...} object with full paths.
+  out="$(nix derivation show "$actionDrv^out" | jq -r '
+    (.derivations // .)[].outputs.out.path
+    | if startswith("/") then . else "/nix/store/\(.)" end
+  ')"
 
   if [[ "$REMOTE_STORE" != "false" ]] && [[ ! -e "$out" ]]; then
     echo "::group::🐟 fetch $action closure (from $REMOTE_STORE)"
