@@ -75,11 +75,9 @@ function provision() {
     )
     echo "Continue with ${#args[@]} '$action' action(s)."
     if [[ ${#args[@]} -ne 0 ]]; then
-      jqprg='. + ($ARGS.positional | map(@base64d|fromjson|
-        (. * {"jobName": "\(.action) //\(.cell)/\(.block)/\(.name)"})
-      ))'
+      jqprg='. + ($ARGS.positional | map(@base64d|fromjson))'
       if ! PROVISIONED=$(
-        command jq --compact-output "$jqprg" --args "${args[@]}"  <<<"$PROVISIONED"
+        command jq --compact-output "$jqprg" --args "${args[@]}" <<<"$PROVISIONED"
       ); then
         echo "An error occurred while aggregating actions after proviso."
         echo "To replicate, run:"
@@ -89,6 +87,27 @@ function provision() {
     fi
     unset -f _proviso
   done
+}
+
+# Regroup a flat list of actions into `{block: {action: [action, ...]}}` — the
+# shape a workflow indexes as `.<block>.<action>` to feed a build matrix — and
+# label each action with the `jobName` its matrix job displays.
+function group_by_block() {
+  command jq --compact-output '
+    map(. + {"jobName": "\(.action) //\(.cell)/\(.block)/\(.name)"})
+    | group_by(.block)
+    | map({
+      key: .[0].block,
+      value: (
+        group_by(.action)
+        | map({
+          key: .[0].action,
+          value: .
+        })
+        | from_entries
+      )
+    })
+    | from_entries'
 }
 
 echo "::group::📓 Evaluate ..."
@@ -109,22 +128,13 @@ echo "::endgroup::"
 
 echo "::group::📞️ Pass artifacts to the build matrix ..."
 {
-  json=$(
-    command jq --compact-output '
-      group_by(.block)
-      | map({
-        key: .[0].block,
-        value: (
-          group_by(.action)
-          | map({
-            key: .[0].action,
-            value: .
-          })
-          | from_entries
-        )
-      })
-      | from_entries' <<<"$PROVISIONED"
-  )
+  json=$(group_by_block <<<"$PROVISIONED")
+
+  # The same shape, before proviso ran. Proviso answers "does this action
+  # still need doing?", which is a different question from "what does this
+  # flake hold?". A job that has to act on every target reads this instead of
+  # the hits.
+  targets=$(group_by_block <<<"$EVAL")
 
   base64 <<<"$json" | tr -d '\n'
   echo
@@ -134,15 +144,16 @@ echo "::group::📞️ Pass artifacts to the build matrix ..."
 
   printf "%s\n" \
     "json=$json" \
+    "targets=$targets" \
     "nix_conf<<$delim" \
     "${NIX_CONFIG[@]}" \
     "$delim" \
     >>"$GITHUB_OUTPUT"
 
-  if [[ "$SKIP_DRV_EXPORT" == "false" ]]; then
+  if [[ $SKIP_DRV_EXPORT == "false" ]]; then
     command mkdir -p "$EVALSTORE_EXPORT"
     for drv in $(command jq --compact-output --raw-output '.[].actionDrv' <<<"$PROVISIONED"); do
-       command nix-store --query --requisites "$drv" | command nix-store --stdin --export | command zstd > "$EVALSTORE_EXPORT/$(basename $drv).zst"
+      command nix-store --query --requisites "$drv" | command nix-store --stdin --export | command zstd >"$EVALSTORE_EXPORT/$(basename $drv).zst"
     done
   fi
 }

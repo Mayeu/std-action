@@ -3,7 +3,6 @@ description: "Find out what to build & run in a Standard project."
 author: "The Standard Authors"
 
 inputs:
-
   ffBuildInstructions:
     required: false
     default: false
@@ -22,11 +21,13 @@ outputs:
   hits:
     value: ${{ steps.eval.outputs.json }}
     description: "JSON object containing CI actions to run."
+  targets:
+    value: ${{ steps.eval.outputs.targets }}
+    description: "JSON object containing every CI actions the flake holds, in the same shape as `hits`, before proviso dropped any."
 
 runs:
   using: "composite"
   steps:
-
     - if: contains( runner.os, 'macos')
       name: Install compatible bash 5+
       shell: bash

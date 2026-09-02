@@ -240,6 +240,15 @@ That means:
   - `packages` is the name of a Standard Block
   - `build` is the name of an Action of that Block
 
+### `hits` and `targets`
+
+Discovery emits two outputs in that same shape. `hits` holds the actions that
+`proviso` selected for the work this run has to do. `targets` holds every action
+the flake evaluates to.
+
+Read `hits` when a job only need to run when those targets have changed, read
+`targets` when a job has to act on a target regardless of proviso's answer.
+
 ### Debugging
 
 Watch out for `base64`-encoded blobs in the logs, you can inspect the
