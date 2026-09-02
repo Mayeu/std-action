@@ -4,11 +4,11 @@ set -e
 set -o pipefail
 
 #shellcheck disable=SC2154
-if [[ "$DRV_IMPORT_FROM_DISCOVERY" == "false" ]]; then
-   unzstd < "$EVALSTORE_IMPORT/$(basename "$actionDrv").zst" | nix-store --import &>/dev/null
+if [[ $DRV_IMPORT_FROM_DISCOVERY == "false" ]]; then
+  unzstd <"$EVALSTORE_IMPORT/$(basename "$actionDrv").zst" | nix-store --import &>/dev/null
 else
-   ssh discovery -- "nix-store --query --requisites $actionDrv | nix-store --stdin --export | zstd" \
-   | unzstd | nix-store --import &>/dev/null
+  ssh discovery -- "nix-store --query --requisites $actionDrv | nix-store --stdin --export | zstd" |
+    unzstd | nix-store --import &>/dev/null
 fi
 
 #shellcheck disable=SC2154
@@ -22,7 +22,7 @@ build_args=(
   "--eval-store" "auto"
 )
 
-if [[ "$REMOTE_STORE" != "false" ]]; then
+if [[ $REMOTE_STORE != "false" ]]; then
   build_args+=(
     "--builders" "''"
     "--store" "$REMOTE_STORE"
@@ -33,7 +33,7 @@ fi
 #   works around https://discourse.nixos.org/t/nix-with-faketty/31042
 start=$(date +%s)
 faketty nix build "${build_args[@]}" "$actionDrv^out" \
-  1> /dev/null \
+  1>/dev/null \
   2> >(sed --unbuffered $'
     s/\r\033\[0m\033\[K//g
 
@@ -46,17 +46,16 @@ faketty nix build "${build_args[@]}" "$actionDrv^out" \
     }
   ' >&2)
 
-echo "Copied $(sed '/copying 0 .*/d' < ./copylogs | wc -l) paths during the build."
+echo "Copied $(sed '/copying 0 .*/d' <./copylogs | wc -l) paths during the build."
 end=$(date +%s)
-echo -e "\033[0;32mBuilt action closure in $((end-start)) seconds\033[0m"
+echo -e "\033[0;32mBuilt action closure in $((end - start)) seconds\033[0m"
 
 echo "::endgroup::"
 
 shopt -s lastpipe
 
-
 #shellcheck disable=SC2154
-if [[ "$action" != "build" ]]; then
+if [[ $action != "build" ]]; then
 
   # nix >= 2.34 wraps output in {"derivations": ..., "version": N}
   # and returns short hashes in .outputs.out.path (no /nix/store/ prefix);
@@ -66,11 +65,11 @@ if [[ "$action" != "build" ]]; then
     | if startswith("/") then . else "/nix/store/\(.)" end
   ')"
 
-  if [[ "$REMOTE_STORE" != "false" ]] && [[ ! -e "$out" ]]; then
+  if [[ $REMOTE_STORE != "false" ]] && [[ ! -e $out ]]; then
     echo "::group::🐟 fetch $action closure (from $REMOTE_STORE)"
     {
       start=$(date +%s)
-      nix copy --from "$REMOTE_STORE" "$out" 1> /dev/null 2> >(sed --unbuffered "
+      nix copy --from "$REMOTE_STORE" "$out" 1>/dev/null 2> >(sed --unbuffered "
   
         # delete some lines that dont make sense
         /^$/d
@@ -82,7 +81,7 @@ if [[ "$action" != "build" ]]; then
   
       " >&2)
       end=$(date +%s)
-      echo -e "\033[0;32mFetched action closure in $((end-start)) seconds.\033[0m"
+      echo -e "\033[0;32mFetched action closure in $((end - start)) seconds.\033[0m"
     }
     echo "::endgroup::"
   fi
@@ -90,7 +89,7 @@ if [[ "$action" != "build" ]]; then
   #shellcheck disable=SC2154
   echo "::group::🏍️️ $action //$cell/$block/$target"
   {
-    
+
     echo -e "\033[1;32m//$cell/$block/$target:$action\033[0m"
     echo -e "\033[1;32m.  $out\033[0m"
 
@@ -100,7 +99,7 @@ if [[ "$action" != "build" ]]; then
     function _run() { . "$out"; }
     _run
     end=$(date +%s)
-    echo -e "\033[0;32mRan action in $((end-start)) seconds.\033[0m"
+    echo -e "\033[0;32mRan action in $((end - start)) seconds.\033[0m"
   }
   echo "::endgroup::"
 fi
